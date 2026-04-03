@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, type ReactNode } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 
@@ -27,7 +27,7 @@ interface SettingsModalProps {
 
 type Category = 'models' | 'audio' | 'ia' | 'export';
 
-const categories: { id: Category; label: string; icon: JSX.Element }[] = [
+const categories: { id: Category; label: string; icon: ReactNode }[] = [
   {
     id: 'models',
     label: 'Modeles',
