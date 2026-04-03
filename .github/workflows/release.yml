@@ -10,78 +10,47 @@ permissions:
   contents: write
 
 jobs:
-  build-macos:
+  publish-tauri:
     strategy:
+      fail-fast: false
       matrix:
         include:
-          - runner: macos-latest
-            target: aarch64-apple-darwin
+          - platform: macos-latest
+            args: '--target aarch64-apple-darwin'
             label: macos-arm64
-          - runner: macos-13-xlarge
-            target: x86_64-apple-darwin
+          - platform: macos-latest
+            args: '--target x86_64-apple-darwin'
             label: macos-x86_64
-    runs-on: ${{ matrix.runner }}
+          - platform: windows-latest
+            args: ''
+            label: windows
+
+    runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v4
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: lts/*
           cache: npm
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
       - name: Cache Rust
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
-          key: ${{ matrix.target }}
+          key: ${{ matrix.label }}
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Build Tauri app
-        env:
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-          MACOSX_DEPLOYMENT_TARGET: "13.0"
-        run: npm run tauri build
-
-      - name: Upload macOS artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.label }}
-          path: |
-            src-tauri/target/release/bundle/dmg/*.dmg
-            src-tauri/target/release/bundle/macos/*.tar.gz
-            src-tauri/target/release/bundle/macos/*.tar.gz.sig
-          if-no-files-found: error
-
-  build-windows:
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: npm
-
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Cache Rust
-        uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: src-tauri
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Install cargs (sherpa-onnx dependency)
+      - name: Install cargs (Windows only)
+        if: matrix.platform == 'windows-latest'
         run: |
           git clone --depth 1 https://github.com/likle/cargs.git C:\cargs
           cd C:\cargs
@@ -90,64 +59,16 @@ jobs:
           Copy-Item build\Release\cargs.lib -Destination "$env:USERPROFILE\.cargo" -Force
           echo "LIB=$env:USERPROFILE\.cargo;$env:LIB" >> $env:GITHUB_ENV
 
-      - name: Build Tauri app
+      - uses: tauri-apps/tauri-action@v0
         env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-        run: npm run tauri build
-
-      - name: Upload Windows artifacts
-        uses: actions/upload-artifact@v4
+          MACOSX_DEPLOYMENT_TARGET: "13.0"
         with:
-          name: windows-bundle
-          path: |
-            src-tauri/target/release/bundle/msi/*.msi
-            src-tauri/target/release/bundle/msi/*.msi.zip
-            src-tauri/target/release/bundle/msi/*.msi.zip.sig
-            src-tauri/target/release/bundle/nsis/*.exe
-            src-tauri/target/release/bundle/nsis/*.nsis.zip
-            src-tauri/target/release/bundle/nsis/*.nsis.zip.sig
-          if-no-files-found: error
-
-  release:
-    needs: [build-macos, build-windows]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Generate beta tag
-        if: github.ref == 'refs/heads/beta'
-        id: beta_tag
-        run: |
-          VERSION=$(node -p "require('./package.json').version")
-          TIMESTAMP=$(date +%Y%m%d%H%M%S)
-          TAG="v${VERSION}-beta.${TIMESTAMP}"
-          git tag "$TAG"
-          git push origin "$TAG"
-          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
-
-      - name: Resolve release tag
-        id: release_tag
-        run: |
-          if [ "${{ github.ref_type }}" = "tag" ]; then
-            echo "tag=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
-            echo "prerelease=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "tag=${{ steps.beta_tag.outputs.tag }}" >> "$GITHUB_OUTPUT"
-            echo "prerelease=true" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ steps.release_tag.outputs.tag }}
-          draft: false
-          prerelease: ${{ steps.release_tag.outputs.prerelease }}
-          generate_release_notes: true
-          files: |
-            artifacts/**/*
+          tagName: v__VERSION__
+          releaseName: 'PopTalk v__VERSION__'
+          releaseBody: 'Voir les assets pour telecharger et installer cette version.'
+          releaseDraft: false
+          prerelease: ${{ github.ref_type != 'tag' }}
+          args: ${{ matrix.args }}
