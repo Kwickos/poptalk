@@ -3,6 +3,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { check } from '@tauri-apps/plugin-updater';
 import { relaunch } from '@tauri-apps/plugin-process';
+import { getVersion } from '@tauri-apps/api/app';
 
 interface AudioDevice {
   name: string;
@@ -100,6 +101,11 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [updateStatus, setUpdateStatus] = useState<'idle' | 'checking' | 'available' | 'up-to-date' | 'downloading' | 'error'>('idle');
   const [updateVersion, setUpdateVersion] = useState('');
+  const [appVersion, setAppVersion] = useState('');
+
+  useEffect(() => {
+    getVersion().then(setAppVersion).catch(() => setAppVersion('?'));
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -388,15 +394,21 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
     setUpdateStatus('checking');
     try {
       const update = await check();
-      if (update) {
+      if (update?.available) {
         setUpdateVersion(update.version);
         setUpdateStatus('available');
       } else {
         setUpdateStatus('up-to-date');
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error('[updater] Check failed:', e);
-      setUpdateStatus('error');
+      // If the error is about no update available, treat as up-to-date
+      const msg = String(e?.message || e || '');
+      if (msg.includes('up to date') || msg.includes('UpToDate')) {
+        setUpdateStatus('up-to-date');
+      } else {
+        setUpdateStatus('error');
+      }
     }
   }, []);
 
@@ -419,7 +431,7 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
       <div>
         <h3 className="text-sm font-semibold text-gray-900 mb-1">PopTalk</h3>
         <p className="text-xs text-gray-400 mb-4">
-          Version 0.3.0 — Transcription locale de reunions avec diarisation.
+          Version {appVersion} — Transcription locale de reunions avec diarisation.
         </p>
 
         <div className="space-y-3">
