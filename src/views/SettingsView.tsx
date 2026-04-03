@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback, type ReactNode } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
+import { check } from '@tauri-apps/plugin-updater';
+import { relaunch } from '@tauri-apps/plugin-process';
 
 interface AudioDevice {
   name: string;
@@ -25,7 +27,7 @@ interface SettingsModalProps {
   onClose: () => void;
 }
 
-type Category = 'models' | 'audio' | 'ia' | 'export';
+type Category = 'models' | 'audio' | 'ia' | 'export' | 'about';
 
 const categories: { id: Category; label: string; icon: ReactNode }[] = [
   {
@@ -64,6 +66,15 @@ const categories: { id: Category; label: string; icon: ReactNode }[] = [
       </svg>
     ),
   },
+  {
+    id: 'about' as Category,
+    label: 'A propos',
+    icon: (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+      </svg>
+    ),
+  },
 ];
 
 function formatSize(bytes: number): string {
@@ -87,6 +98,8 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
   const [saving, setSaving] = useState(false);
   const [showKey, setShowKey] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [updateStatus, setUpdateStatus] = useState<'idle' | 'checking' | 'available' | 'up-to-date' | 'downloading' | 'error'>('idle');
+  const [updateVersion, setUpdateVersion] = useState('');
 
   useEffect(() => {
     (async () => {
@@ -371,12 +384,114 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
     </div>
   );
 
+  const handleCheckUpdate = useCallback(async () => {
+    setUpdateStatus('checking');
+    try {
+      const update = await check();
+      if (update) {
+        setUpdateVersion(update.version);
+        setUpdateStatus('available');
+      } else {
+        setUpdateStatus('up-to-date');
+      }
+    } catch (e) {
+      console.error('[updater] Check failed:', e);
+      setUpdateStatus('error');
+    }
+  }, []);
+
+  const handleInstallUpdate = useCallback(async () => {
+    setUpdateStatus('downloading');
+    try {
+      const update = await check();
+      if (update) {
+        await update.downloadAndInstall();
+        await relaunch();
+      }
+    } catch (e) {
+      console.error('[updater] Install failed:', e);
+      setUpdateStatus('error');
+    }
+  }, []);
+
+  const renderAbout = () => (
+    <div className="space-y-6">
+      <div>
+        <h3 className="text-sm font-semibold text-gray-900 mb-1">PopTalk</h3>
+        <p className="text-xs text-gray-400 mb-4">
+          Version 0.3.0 — Transcription locale de reunions avec diarisation.
+        </p>
+
+        <div className="space-y-3">
+          <button
+            onClick={handleCheckUpdate}
+            disabled={updateStatus === 'checking' || updateStatus === 'downloading'}
+            className="flex items-center gap-2.5 px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 hover:bg-gray-100 transition-all disabled:opacity-50"
+          >
+            {updateStatus === 'checking' ? (
+              <>
+                <svg className="w-4 h-4 animate-spin text-gray-400" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+                Verification...
+              </>
+            ) : updateStatus === 'downloading' ? (
+              <>
+                <svg className="w-4 h-4 animate-spin text-gray-400" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+                Telechargement...
+              </>
+            ) : (
+              <>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182" />
+                </svg>
+                Verifier les mises a jour
+              </>
+            )}
+          </button>
+
+          {updateStatus === 'available' && (
+            <div className="flex items-center justify-between px-4 py-3 bg-blue-50 border border-blue-100 rounded-xl">
+              <div>
+                <p className="text-sm font-medium text-blue-900">Version {updateVersion} disponible</p>
+                <p className="text-xs text-blue-600 mt-0.5">Une nouvelle version est prete a etre installee.</p>
+              </div>
+              <button
+                onClick={handleInstallUpdate}
+                className="shrink-0 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition-all"
+              >
+                Installer
+              </button>
+            </div>
+          )}
+
+          {updateStatus === 'up-to-date' && (
+            <div className="px-4 py-3 bg-emerald-50 border border-emerald-100 rounded-xl">
+              <p className="text-sm text-emerald-700">Vous etes a jour.</p>
+            </div>
+          )}
+
+          {updateStatus === 'error' && (
+            <div className="px-4 py-3 bg-red-50 border border-red-100 rounded-xl">
+              <p className="text-sm text-red-700">Impossible de verifier les mises a jour. Verifiez votre connexion.</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
   const renderContent = () => {
     switch (activeCategory) {
       case 'models': return renderModels();
       case 'audio': return renderAudio();
       case 'ia': return renderIA();
       case 'export': return renderExport();
+      case 'about': return renderAbout();
     }
   };
 
