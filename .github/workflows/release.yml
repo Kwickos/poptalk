@@ -16,10 +16,10 @@ jobs:
       matrix:
         include:
           - platform: macos-latest
-            args: '--target aarch64-apple-darwin'
+            args: ''
             label: macos-arm64
-          - platform: macos-latest
-            args: '--target x86_64-apple-darwin'
+          - platform: macos-15-intel
+            args: ''
             label: macos-x86_64
           - platform: windows-latest
             args: ''
@@ -37,8 +37,6 @@ jobs:
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
       - name: Cache Rust
         uses: Swatinem/rust-cache@v2
