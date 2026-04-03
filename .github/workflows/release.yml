@@ -47,6 +47,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Install sherpa-onnx static libs (macOS)
+        if: startsWith(matrix.platform, 'macos')
+        run: |
+          wget -q https://github.com/k2-fsa/sherpa-onnx/releases/download/v1.12.9/sherpa-onnx-v1.12.9-osx-universal2-static.tar.bz2
+          tar xf sherpa-onnx-v1.12.9-osx-universal2-static.tar.bz2
+          echo "SHERPA_LIB_PATH=$(pwd)/sherpa-onnx-v1.12.9-osx-universal2-static" >> $GITHUB_ENV
+
       - name: Install sherpa-onnx static libs + cargs (Windows only)
         if: matrix.platform == 'windows-latest'
         run: |

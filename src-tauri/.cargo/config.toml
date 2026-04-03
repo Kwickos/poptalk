@@ -3,3 +3,8 @@ rustflags = ["-C", "link-arg=-Wl,-rpath,/usr/lib/swift"]
 
 [target.aarch64-apple-darwin]
 rustflags = ["-C", "link-arg=-Wl,-rpath,/usr/lib/swift"]
+
+[env]
+# Point to static sherpa-onnx libs to avoid dylib issues at runtime
+# CI sets this via GITHUB_ENV, locally it uses this default
+SHERPA_LIB_PATH = { value = "~/Library/Application Support/poptalk/sherpa-onnx-static", force = false }
