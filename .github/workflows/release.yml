@@ -51,16 +51,18 @@ jobs:
         if: matrix.platform == 'windows-latest'
         run: |
           # Download and extract sherpa-onnx static binaries
-          wget.exe -q https://github.com/k2-fsa/sherpa-onnx/releases/download/v1.12.9/sherpa-onnx-v1.12.9-win-x64-static.tar.bz2
-          tar.exe xf sherpa-onnx-v1.12.9-win-x64-static.tar.bz2
-          echo "SHERPA_LIB_PATH=$pwd\sherpa-onnx-v1.12.9-win-x64-static" >> $env:GITHUB_ENV
+          $ProgressPreference = 'SilentlyContinue'
+          Invoke-WebRequest -Uri "https://github.com/k2-fsa/sherpa-onnx/releases/download/v1.12.9/sherpa-onnx-v1.12.9-win-x64-static.tar.bz2" -OutFile "sherpa-static.tar.bz2"
+          tar.exe xf sherpa-static.tar.bz2
+          $sherpaPath = "$pwd\sherpa-onnx-v1.12.9-win-x64-static"
+          echo "SHERPA_LIB_PATH=$sherpaPath" >> $env:GITHUB_ENV
 
-          # Build cargs dependency
+          # Build cargs dependency and copy into sherpa lib dir
           git clone --depth 1 https://github.com/likle/cargs.git C:\cargs
           cd C:\cargs
           cmake -B build
           cmake --build build --config Release
-          Copy-Item build\Release\cargs.lib -Destination "$pwd\..\sherpa-onnx-v1.12.9-win-x64-static\lib" -Force
+          Copy-Item "build\Release\cargs.lib" -Destination "$sherpaPath\lib" -Force
 
       - uses: tauri-apps/tauri-action@v0
         env:
