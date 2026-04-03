@@ -9,25 +9,26 @@ on:
 permissions:
   contents: write
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   build-macos:
     strategy:
       matrix:
         include:
-          - runner: macos-latest
-            target: aarch64-apple-darwin
+          - target: aarch64-apple-darwin
             label: macos-arm64
-          - runner: macos-13
-            target: x86_64-apple-darwin
+          - target: x86_64-apple-darwin
             label: macos-x86_64
-    runs-on: ${{ matrix.runner }}
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
       - name: Setup Rust
@@ -39,6 +40,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
+          key: ${{ matrix.target }}
 
       - name: Install dependencies
         run: npm ci
@@ -47,6 +49,7 @@ jobs:
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          MACOSX_DEPLOYMENT_TARGET: "13.0"
         run: npm run tauri build -- --target ${{ matrix.target }}
 
       - name: Upload macOS artifacts
@@ -67,7 +70,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
       - name: Setup Rust
@@ -80,6 +83,16 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Install cargs (sherpa-onnx dependency)
+        run: |
+          git clone --depth 1 https://github.com/likle/cargs.git C:\cargs
+          cd C:\cargs
+          cmake -B build -DCMAKE_INSTALL_PREFIX=C:\cargs-install
+          cmake --build build --config Release
+          cmake --install build --config Release
+          echo "CMAKE_PREFIX_PATH=C:\cargs-install" >> $env:GITHUB_ENV
+          echo "C:\cargs-install\lib" >> $env:GITHUB_PATH
 
       - name: Build Tauri app
         env:
