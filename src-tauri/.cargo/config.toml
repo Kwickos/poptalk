@@ -4,16 +4,8 @@ rustflags = ["-C", "link-arg=-Wl,-rpath,/usr/lib/swift"]
 [target.aarch64-apple-darwin]
 rustflags = ["-C", "link-arg=-Wl,-rpath,/usr/lib/swift"]
 
-[target.x86_64-pc-windows-msvc]
-rustflags = [
-    "-C", "target-feature=+crt-static",
-    "-L", "native=C:\\Windows\\System32",
-    "-C", "link-arg=advapi32.lib",
-    "-C", "link-arg=advevtapi.lib",
-    "-C", "link-arg=ole32.lib",
-]
-
 [env]
-# Point to static sherpa-onnx libs to avoid dylib issues at runtime
-# CI sets this via GITHUB_ENV, locally it uses this default
+# Use static sherpa-onnx on macOS to avoid dylib issues at runtime.
+# CI overrides these via GITHUB_ENV. Windows CI uses shared libs instead.
 SHERPA_LIB_PATH = { value = "~/Library/Application Support/poptalk/sherpa-onnx-static", force = false }
+SHERPA_BUILD_SHARED_LIBS = { value = "0", force = false }
