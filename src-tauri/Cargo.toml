@@ -36,7 +36,7 @@ futures-util = "0.3"
 dirs = "6"
 genpdf = "0.2"
 whisper-rs = "0.16"
-sherpa-rs = { version = "0.6", default-features = false, features = ["download-binaries"] }
+sherpa-rs = { version = "0.6", default-features = false, features = ["static"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 screencapturekit = { version = "1", features = ["async"] }
