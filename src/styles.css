@@ -5,13 +5,13 @@
 }
 
 body {
-  background-color: #f9fafb;
+  background-color: #eef0f3;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   font-family: var(--font-sans);
 }
 
-/* macOS-style thin scrollbar */
+/* ── Scrollbar ── */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -22,73 +22,84 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background-color: rgba(0, 0, 0, 0.1);
+  background-color: rgba(0, 0, 0, 0.08);
   border-radius: 9999px;
+  transition: background-color 0.2s;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(0, 0, 0, 0.2);
+  background-color: rgba(0, 0, 0, 0.18);
 }
 
 ::-webkit-scrollbar-corner {
   background: transparent;
 }
 
-/* Smooth transitions for interactive elements */
+/* ── Base ── */
 * {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Pulsing animation for recording indicator */
+/* Tabular nums for timers and counters */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Balance headings, avoid orphans in body */
+h1, h2, h3 {
+  text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
+}
+
+/* ── Animations ── */
+
+/* Pulsing for recording indicator */
 @keyframes pulse-recording {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.4;
-  }
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
 }
 
 .animate-pulse-recording {
   animation: pulse-recording 1.5s ease-in-out infinite;
 }
 
-/* Slide-in animation for LLM panel */
+/* Slide in from right (chat panel) */
 @keyframes slide-in-right {
-  from {
-    transform: translateX(100%);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
+  from { transform: translateX(20px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
 }
 
 .animate-slide-in-right {
-  animation: slide-in-right 0.25s ease-out;
+  animation: slide-in-right 0.25s cubic-bezier(0.2, 0, 0, 1);
 }
 
-/* Fade in for notifications */
+/* Fade in down (notifications, modals) */
 @keyframes fade-in-down {
-  from {
-    transform: translateY(-8px);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
+  from { transform: translateY(-8px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }
 
 .animate-fade-in-down {
-  animation: fade-in-down 0.2s ease-out;
+  animation: fade-in-down 0.2s cubic-bezier(0.2, 0, 0, 1);
 }
 
-/* Fade in up for toasts */
+/* Fade in up (toasts, new items) */
 @keyframes fade-in-up {
+  from { transform: translateY(8px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.25s cubic-bezier(0.2, 0, 0, 1);
+}
+
+/* Segment entrance — staggerable with animation-delay */
+@keyframes segment-enter {
   from {
-    transform: translateY(8px);
+    transform: translateY(6px);
     opacity: 0;
   }
   to {
@@ -97,11 +108,85 @@ body {
   }
 }
 
-.animate-fade-in-up {
-  animation: fade-in-up 0.2s ease-out;
+.animate-segment-enter {
+  animation: segment-enter 0.3s cubic-bezier(0.2, 0, 0, 1) both;
 }
 
-/* Markdown styles for chat assistant messages */
+/* Scale pop for modals / popovers */
+@keyframes scale-pop {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-scale-pop {
+  animation: scale-pop 0.2s cubic-bezier(0.2, 0, 0, 1);
+}
+
+/* Subtle fade for tab content switching */
+@keyframes content-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate-content-fade {
+  animation: content-fade 0.15s ease-out;
+}
+
+/* ── Interactive feedback ── */
+
+/* Press-down scale for buttons */
+.press-scale {
+  transition-property: transform, box-shadow;
+  transition-duration: 150ms;
+  transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
+}
+
+.press-scale:active {
+  transform: scale(0.96);
+}
+
+/* Hover lift for cards */
+.hover-lift {
+  transition-property: transform, box-shadow;
+  transition-duration: 200ms;
+  transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
+}
+
+.hover-lift:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 1px 2px rgba(0,0,0,0.04),
+    0 4px 12px rgba(0,0,0,0.06);
+}
+
+/* Multi-layer shadow for panels */
+.shadow-panel {
+  box-shadow:
+    0 0 0 1px rgba(0,0,0,0.03),
+    0 1px 2px rgba(0,0,0,0.04),
+    0 4px 16px rgba(0,0,0,0.04);
+}
+
+/* Subtle inset shadow for inputs */
+.shadow-input {
+  box-shadow:
+    0 0 0 1px rgba(0,0,0,0.06),
+    inset 0 1px 2px rgba(0,0,0,0.04);
+}
+
+.shadow-input:focus {
+  box-shadow:
+    0 0 0 2px rgba(0,0,0,0.1),
+    inset 0 1px 2px rgba(0,0,0,0.02);
+}
+
+/* ── Markdown styles for chat assistant messages ── */
 .prose-chat {
   font-size: 0.75rem;
   line-height: 1.6;

@@ -52,7 +52,7 @@ export default function SpeakerEditor({
   }
 
   return (
-    <div className="absolute z-50 top-full left-0 mt-2 bg-white border border-gray-100 rounded-2xl shadow-lg p-4 min-w-[260px]">
+    <div className="absolute z-50 top-full left-0 mt-2 bg-white rounded-2xl shadow-panel p-4 min-w-[260px] animate-scale-pop">
       <label className="block text-xs font-medium text-gray-500 mb-2">
         Renommer le locuteur
       </label>
@@ -62,7 +62,7 @@ export default function SpeakerEditor({
         onChange={(e) => setNewName(e.target.value)}
         onKeyDown={handleKeyDown}
         autoFocus
-        className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-100 rounded-xl text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:bg-white focus:border-gray-200 focus:ring-0 transition-all duration-150"
+        className="w-full px-3.5 py-2.5 bg-gray-50 rounded-xl text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:bg-white shadow-input transition-[background,box-shadow] duration-200"
         placeholder="Nom du locuteur"
       />
       {error && (
@@ -72,7 +72,7 @@ export default function SpeakerEditor({
         <button
           onClick={handleRename}
           disabled={loading}
-          className="flex-1 px-4 py-2 bg-gray-900 hover:bg-gray-800 disabled:opacity-50 text-white text-xs font-medium rounded-lg transition-all duration-150"
+          className="flex-1 px-4 py-2 bg-gray-900 hover:bg-gray-800 disabled:opacity-50 text-white text-xs font-medium rounded-lg press-scale transition-[background,transform] duration-150"
         >
           {loading ? 'En cours...' : 'Renommer'}
         </button>

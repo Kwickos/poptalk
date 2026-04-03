@@ -208,7 +208,7 @@ export default function SessionView({ onSessionStopped, onLiveSessionChange, onL
               <div className="flex bg-white/80 rounded-full p-0.5 shadow-sm">
                 <button
                   onClick={() => setMode('visio')}
-                  className={`px-3.5 py-1 text-xs font-medium rounded-full transition-all duration-150 ${
+                  className={`px-3.5 py-1 text-xs font-medium rounded-full press-scale transition-[background,color,transform] duration-200 ${
                     mode === 'visio'
                       ? 'bg-gray-900 text-white'
                       : 'text-gray-400 hover:text-gray-600'
@@ -218,7 +218,7 @@ export default function SessionView({ onSessionStopped, onLiveSessionChange, onL
                 </button>
                 <button
                   onClick={() => setMode('presentiel')}
-                  className={`px-3.5 py-1 text-xs font-medium rounded-full transition-all duration-150 ${
+                  className={`px-3.5 py-1 text-xs font-medium rounded-full press-scale transition-[background,color,transform] duration-200 ${
                     mode === 'presentiel'
                       ? 'bg-gray-900 text-white'
                       : 'text-gray-400 hover:text-gray-600'
@@ -252,7 +252,7 @@ export default function SessionView({ onSessionStopped, onLiveSessionChange, onL
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Rechercher..."
-                  className="w-44 bg-white/80 rounded-full py-1.5 pl-9 pr-3 text-xs text-gray-900 placeholder-gray-300 focus:outline-none focus:bg-white focus:ring-1 focus:ring-gray-200 shadow-sm transition-all duration-150"
+                  className="w-44 bg-white/80 rounded-full py-1.5 pl-9 pr-3 text-xs text-gray-900 placeholder-gray-300 focus:outline-none focus:bg-white shadow-input transition-[background,box-shadow] duration-200"
                 />
               </div>
             )}
@@ -260,7 +260,7 @@ export default function SessionView({ onSessionStopped, onLiveSessionChange, onL
             {isRecording ? (
               <button
                 onClick={handleStop}
-                className="flex items-center gap-1.5 px-4 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-full text-xs font-medium transition-all duration-150"
+                className="flex items-center gap-1.5 px-4 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-full text-xs font-medium press-scale transition-[background,transform] duration-150"
               >
                 <svg className="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 24 24">
                   <rect x="6" y="6" width="12" height="12" rx="2" />
@@ -270,7 +270,7 @@ export default function SessionView({ onSessionStopped, onLiveSessionChange, onL
             ) : (
               <button
                 onClick={handleStart}
-                className="flex items-center gap-1.5 px-4 py-1.5 bg-gray-900 hover:bg-gray-800 text-white rounded-full text-xs font-medium transition-all duration-150"
+                className="flex items-center gap-1.5 px-4 py-1.5 bg-gray-900 hover:bg-gray-800 text-white rounded-full text-xs font-medium press-scale transition-[background,transform] duration-150"
               >
                 <svg className="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 24 24">
                   <circle cx="12" cy="12" r="6" />

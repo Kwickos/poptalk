@@ -43,7 +43,7 @@ export default function TranscriptLine({ text, startTime, highlight, speaker, is
   const alignRight = !hasNoSpeaker && isUser;
 
   return (
-    <div className={`flex gap-2.5 mb-3 ${alignRight ? 'flex-row-reverse' : ''}`}>
+    <div className={`flex gap-2.5 mb-3 animate-segment-enter ${alignRight ? 'flex-row-reverse' : ''}`}>
       {/* Avatar */}
       {!hasNoSpeaker && (
         <div className="shrink-0 mt-5">

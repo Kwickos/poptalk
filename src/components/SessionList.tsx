@@ -65,7 +65,7 @@ export default function SessionList({
   };
 
   return (
-    <aside className="w-56 shrink-0 bg-white rounded-2xl flex flex-col min-h-0 overflow-hidden">
+    <aside className="w-56 shrink-0 bg-white rounded-2xl flex flex-col min-h-0 overflow-hidden shadow-panel">
       {/* Header */}
       <div className="px-4 pt-4 pb-3">
         <h2 className="text-[11px] font-medium text-gray-400 uppercase tracking-widest">
@@ -96,7 +96,7 @@ export default function SessionList({
                 <div
                   key={session.id}
                   onClick={() => handleClick(session.id)}
-                  className={`relative w-full text-left px-3 py-2.5 rounded-xl transition-all duration-150 group cursor-pointer ${
+                  className={`relative w-full text-left px-3 py-2.5 rounded-xl transition-[background,color,transform] duration-200 group cursor-pointer press-scale ${
                     isSelected
                       ? 'bg-gray-100/80 text-gray-900'
                       : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'

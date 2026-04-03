@@ -80,7 +80,7 @@ export default function ChatPanel({ sessionId, liveText }: ChatPanelProps) {
   );
 
   return (
-    <aside className="w-[280px] shrink-0 bg-white rounded-2xl flex flex-col min-h-0 overflow-hidden">
+    <aside className="w-[280px] shrink-0 bg-white rounded-2xl flex flex-col min-h-0 overflow-hidden shadow-panel">
       {/* Header */}
       <div className="px-4 py-3">
         <h2 className="text-[11px] font-medium text-gray-400 uppercase tracking-widest">
@@ -117,7 +117,7 @@ export default function ChatPanel({ sessionId, liveText }: ChatPanelProps) {
             {messages.map((msg) => (
               <div
                 key={msg.id}
-                className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                className={`flex animate-segment-enter ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 <div
                   className={`max-w-[85%] px-3 py-2 text-xs leading-relaxed ${
@@ -163,12 +163,12 @@ export default function ChatPanel({ sessionId, liveText }: ChatPanelProps) {
             onKeyDown={handleKeyDown}
             placeholder={sessionId ? 'Poser une question...' : 'Aucune session active'}
             disabled={!sessionId || isLoading}
-            className="flex-1 px-3.5 py-2 bg-gray-50 rounded-full text-xs text-gray-900 placeholder-gray-300 focus:outline-none focus:bg-gray-100 focus:ring-0 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 px-3.5 py-2 bg-gray-50 rounded-full text-xs text-gray-900 placeholder-gray-300 focus:outline-none focus:bg-white shadow-input transition-[background,box-shadow] duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
           />
           <button
             onClick={handleSend}
             disabled={!sessionId || !input.trim() || isLoading}
-            className="p-2 bg-gray-900 hover:bg-gray-800 disabled:bg-gray-200 disabled:text-gray-300 text-white rounded-full transition-all duration-150 shrink-0"
+            className="p-2 bg-gray-900 hover:bg-gray-800 disabled:bg-gray-200 disabled:text-gray-300 text-white rounded-full press-scale transition-[background,transform] duration-150 shrink-0"
             title="Envoyer"
           >
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">

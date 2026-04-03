@@ -98,10 +98,10 @@ function App() {
         {/* Interactive content — pointer-events-none so empty space falls through to drag layer */}
         <div className="relative z-10 flex items-center justify-center h-full px-5 pointer-events-none">
           {/* Center: Tab toggle — floating pill */}
-          <div className="flex bg-white/60 backdrop-blur-sm rounded-full p-1 shadow-sm pointer-events-auto">
+          <div className="flex bg-white/60 backdrop-blur-sm rounded-full p-1 shadow-panel pointer-events-auto">
             <button
               onClick={() => setActiveTab('historique')}
-              className={`px-5 py-1.5 rounded-full text-xs font-medium transition-all duration-150 ${
+              className={`px-5 py-1.5 rounded-full text-xs font-medium press-scale transition-[background,color,box-shadow] duration-200 ${
                 activeTab === 'historique'
                   ? 'bg-white text-gray-900 shadow-sm'
                   : 'text-gray-400 hover:text-gray-600'
@@ -111,7 +111,7 @@ function App() {
             </button>
             <button
               onClick={() => setActiveTab('session')}
-              className={`px-5 py-1.5 rounded-full text-xs font-medium transition-all duration-150 ${
+              className={`px-5 py-1.5 rounded-full text-xs font-medium press-scale transition-[background,color,box-shadow] duration-200 ${
                 activeTab === 'session'
                   ? 'bg-white text-gray-900 shadow-sm'
                   : 'text-gray-400 hover:text-gray-600'
@@ -136,9 +136,9 @@ function App() {
         />
 
         {/* Center: Main content — floating panel */}
-        <main className="flex-1 min-w-0 bg-white rounded-2xl overflow-hidden">
+        <main className="flex-1 min-w-0 bg-white rounded-2xl overflow-hidden shadow-panel">
           {activeTab === 'session' ? (
-            <SessionView
+            <SessionView key="session"
               onSessionStopped={handleSessionStopped}
               onLiveSessionChange={handleLiveSessionChange}
               onLiveTextChange={handleLiveTextChange}
@@ -174,7 +174,7 @@ function App() {
 
       {/* Update banner */}
       {updateAvailable && (
-        <div className="fixed bottom-4 right-4 bg-white rounded-xl shadow-lg border border-gray-200 p-4 max-w-xs z-50">
+        <div className="fixed bottom-4 right-4 bg-white rounded-xl shadow-panel p-4 max-w-xs z-50 animate-fade-in-up">
           <p className="text-sm font-medium text-gray-900 mb-1">
             Mise a jour {updateAvailable.version}
           </p>
@@ -191,7 +191,7 @@ function App() {
             <button
               onClick={handleUpdate}
               disabled={updating}
-              className="px-3 py-1.5 text-xs bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50"
+              className="px-3 py-1.5 text-xs bg-gray-900 text-white rounded-lg hover:bg-gray-800 press-scale transition-[background,transform] duration-150 disabled:opacity-50"
             >
               {updating ? 'Mise a jour...' : 'Installer'}
             </button>

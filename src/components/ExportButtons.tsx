@@ -102,7 +102,7 @@ export default function ExportButtons({ sessionId }: ExportButtonsProps) {
       <div className="relative" ref={dropdownRef}>
         <button
           onClick={() => setOpen(!open)}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-50 text-xs font-medium rounded-lg transition-all duration-150"
+          className="flex items-center gap-1.5 px-3 py-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-50 text-xs font-medium rounded-lg press-scale transition-[color,background,transform] duration-150"
         >
           {loadingFormat ? (
             <svg className="animate-spin h-3.5 w-3.5" fill="none" viewBox="0 0 24 24">
@@ -121,7 +121,7 @@ export default function ExportButtons({ sessionId }: ExportButtonsProps) {
         </button>
 
         {open && (
-          <div className="absolute right-0 top-full mt-1.5 bg-white border border-gray-100 rounded-xl shadow-lg py-1 min-w-[160px] z-50">
+          <div className="absolute right-0 top-full mt-1.5 bg-white rounded-xl shadow-panel py-1 min-w-[160px] z-50 animate-scale-pop">
             {EXPORT_OPTIONS.map((opt) => (
               <button
                 key={opt.format}

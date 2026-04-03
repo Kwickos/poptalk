@@ -515,7 +515,7 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
       {/* Modal */}
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
         <div
-          className="bg-white rounded-2xl shadow-xl border border-gray-100 w-full max-w-2xl pointer-events-auto animate-fade-in-down flex flex-col"
+          className="bg-white rounded-2xl shadow-panel w-full max-w-2xl pointer-events-auto animate-scale-pop flex flex-col"
           style={{ maxHeight: '80vh' }}
           onClick={(e) => e.stopPropagation()}
         >
@@ -573,7 +573,7 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
                 <button
                   onClick={handleSave}
                   disabled={loading || saving}
-                  className={`flex items-center gap-2 px-5 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg text-sm font-medium transition-all duration-150 shadow-sm ${
+                  className={`flex items-center gap-2 px-5 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg text-sm font-medium press-scale transition-[background,transform] duration-150 shadow-sm ${
                     loading || saving ? 'opacity-50 cursor-not-allowed' : ''
                   }`}
                 >
