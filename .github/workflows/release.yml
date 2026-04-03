@@ -14,11 +14,13 @@ jobs:
     strategy:
       matrix:
         include:
-          - target: aarch64-apple-darwin
+          - runner: macos-latest
+            target: aarch64-apple-darwin
             label: macos-arm64
-          - target: x86_64-apple-darwin
+          - runner: macos-13-xlarge
+            target: x86_64-apple-darwin
             label: macos-x86_64
-    runs-on: macos-latest
+    runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
 
@@ -30,8 +32,6 @@ jobs:
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.target }}
 
       - name: Cache Rust
         uses: Swatinem/rust-cache@v2
@@ -47,16 +47,16 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
           MACOSX_DEPLOYMENT_TARGET: "13.0"
-        run: npm run tauri build -- --target ${{ matrix.target }}
+        run: npm run tauri build
 
       - name: Upload macOS artifacts
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.label }}
           path: |
-            src-tauri/target/${{ matrix.target }}/release/bundle/dmg/*.dmg
-            src-tauri/target/${{ matrix.target }}/release/bundle/macos/*.tar.gz
-            src-tauri/target/${{ matrix.target }}/release/bundle/macos/*.tar.gz.sig
+            src-tauri/target/release/bundle/dmg/*.dmg
+            src-tauri/target/release/bundle/macos/*.tar.gz
+            src-tauri/target/release/bundle/macos/*.tar.gz.sig
           if-no-files-found: error
 
   build-windows:
@@ -85,11 +85,10 @@ jobs:
         run: |
           git clone --depth 1 https://github.com/likle/cargs.git C:\cargs
           cd C:\cargs
-          cmake -B build -DCMAKE_INSTALL_PREFIX=C:\cargs-install
+          cmake -B build
           cmake --build build --config Release
-          cmake --install build --config Release
-          echo "CMAKE_PREFIX_PATH=C:\cargs-install" >> $env:GITHUB_ENV
-          echo "C:\cargs-install\lib" >> $env:GITHUB_PATH
+          Copy-Item build\Release\cargs.lib -Destination "$env:USERPROFILE\.cargo" -Force
+          echo "LIB=$env:USERPROFILE\.cargo;$env:LIB" >> $env:GITHUB_ENV
 
       - name: Build Tauri app
         env:
