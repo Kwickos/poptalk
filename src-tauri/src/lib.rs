@@ -67,7 +67,7 @@ pub fn run() {
             let about = PredefinedMenuItem::about(app, Some("A propos de PopTalk"), Some(
                 AboutMetadataBuilder::new()
                     .name(Some("PopTalk"))
-                    .version(Some("0.2.0"))
+                    .version(Some(env!("CARGO_PKG_VERSION")))
                     .build()
             ))?;
             let settings_item = MenuItemBuilder::with_id("settings", "Parametres...")
