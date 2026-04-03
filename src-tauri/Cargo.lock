@@ -3389,7 +3389,7 @@ dependencies = [
 
 [[package]]
 name = "poptalk-app"
-version = "0.2.0"
+version = "0.3.1"
 dependencies = [
  "chrono",
  "cpal",
