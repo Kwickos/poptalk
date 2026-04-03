@@ -1,5 +1,8 @@
 pub mod audio;
-pub mod mistral;
+pub mod whisper;
+pub mod diarization;
+pub mod models;
+pub mod llm;
 pub mod db;
 pub mod export;
 pub mod commands;
@@ -17,8 +20,8 @@ use tauri::{
 pub fn run() {
     let db_path = dirs::data_dir()
         .unwrap_or_else(|| std::path::PathBuf::from("."))
-        .join("poptranscribe")
-        .join("poptranscribe.db");
+        .join("poptalk")
+        .join("poptalk.db");
 
     // Create parent directory if needed
     if let Some(parent) = db_path.parent() {
@@ -55,12 +58,15 @@ pub fn run() {
             commands::set_setting,
             commands::list_input_devices,
             commands::pick_folder,
+            commands::get_available_models,
+            commands::get_model_status,
+            commands::download_model,
         ])
         .setup(|app| {
             // --- Application menu bar ---
-            let about = PredefinedMenuItem::about(app, Some("A propos de PopTranscribe"), Some(
+            let about = PredefinedMenuItem::about(app, Some("A propos de PopTalk"), Some(
                 AboutMetadataBuilder::new()
-                    .name(Some("PopTranscribe"))
+                    .name(Some("PopTalk"))
                     .version(Some("0.2.0"))
                     .build()
             ))?;
@@ -68,15 +74,15 @@ pub fn run() {
                 .accelerator("CmdOrCtrl+,")
                 .build(app)?;
             let separator = PredefinedMenuItem::separator(app)?;
-            let quit_menu = PredefinedMenuItem::quit(app, Some("Quitter PopTranscribe"))?;
+            let quit_menu = PredefinedMenuItem::quit(app, Some("Quitter PopTalk"))?;
 
             #[cfg(target_os = "macos")]
             let app_submenu = {
-                let hide = PredefinedMenuItem::hide(app, Some("Masquer PopTranscribe"))?;
+                let hide = PredefinedMenuItem::hide(app, Some("Masquer PopTalk"))?;
                 let hide_others = PredefinedMenuItem::hide_others(app, Some("Masquer les autres"))?;
                 let show_all = PredefinedMenuItem::show_all(app, Some("Tout afficher"))?;
 
-                SubmenuBuilder::new(app, "PopTranscribe")
+                SubmenuBuilder::new(app, "PopTalk")
                     .item(&about)
                     .separator()
                     .item(&settings_item)
@@ -90,7 +96,7 @@ pub fn run() {
             };
 
             #[cfg(not(target_os = "macos"))]
-            let app_submenu = SubmenuBuilder::new(app, "PopTranscribe")
+            let app_submenu = SubmenuBuilder::new(app, "PopTalk")
                 .item(&about)
                 .separator()
                 .item(&settings_item)
@@ -132,7 +138,7 @@ pub fn run() {
             });
 
             // --- System tray ---
-            let open_item = MenuItemBuilder::with_id("open", "Ouvrir PopTranscribe").build(app)?;
+            let open_item = MenuItemBuilder::with_id("open", "Ouvrir PopTalk").build(app)?;
             let quit_item = MenuItemBuilder::with_id("quit", "Quitter").build(app)?;
             let tray_menu = MenuBuilder::new(app)
                 .items(&[&open_item])

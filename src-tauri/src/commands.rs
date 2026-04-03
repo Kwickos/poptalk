@@ -4,7 +4,7 @@ use tauri::{Emitter, State};
 use crate::app_state::{ActiveSession, AppState, SendCapturer};
 use crate::audio::capture::{AudioCapturer, CaptureMode};
 use crate::db::{Session, Segment};
-use crate::mistral::chat::Summary;
+use crate::llm::chat::Summary;
 
 /// Detail view for a session, including its segments and optional summary.
 #[derive(Debug, Clone, serde::Serialize)]
@@ -38,14 +38,16 @@ pub async fn start_session(
         db.create_session(&title, &mode).map_err(|e| e.to_string())?
     };
 
-    // Check API key
-    let api_key = {
-        let key = state.api_key.lock().map_err(|e| e.to_string())?;
-        key.clone()
+    // Get configured whisper model
+    let whisper_model_id = {
+        let db = state.db.lock().map_err(|e| e.to_string())?;
+        db.get_setting("whisper_model")
+            .ok()
+            .flatten()
+            .unwrap_or_else(|| "large-v3-turbo-q5_0".to_string())
     };
-    if api_key.is_empty() {
-        return Err("Cle API Mistral non configuree. Allez dans Parametres.".to_string());
-    }
+    let model_path = crate::models::get_whisper_model_path(&whisper_model_id)
+        .ok_or_else(|| format!("Modele Whisper '{}' non telecharge. Allez dans Parametres.", whisper_model_id))?;
 
     // Read configured input device from settings
     let device_name = {
@@ -72,42 +74,40 @@ pub async fn start_session(
     let app_clone = app.clone();
     let db_clone = Arc::clone(&state.db);
 
-    // Background task: real-time transcription via WebSocket
+    // Background task: real-time transcription via local Whisper
     tokio::spawn(async move {
         let sample_rate = actual_sample_rate;
         let stop_rx = stop_rx;
 
-        // Connect to Mistral real-time WebSocket
-        let (rt_handle, mut rt_events) = match crate::mistral::realtime::connect_realtime(
-            &api_key,
+        // Connect to local Whisper real-time transcription
+        let (rt_handle, mut rt_events) = match crate::whisper::realtime::connect_realtime_local(
+            &model_path,
             sample_rate,
-        )
-        .await
-        {
+        ) {
             Ok(conn) => conn,
             Err(e) => {
-                eprintln!("[session] Failed to connect realtime transcription: {}", e);
+                eprintln!("[session] Failed to start local transcription: {}", e);
                 let _ = app_clone.emit(
                     "session-error",
-                    format!("Erreur connexion transcription: {}", e),
+                    format!("Erreur demarrage transcription: {}", e),
                 );
                 return;
             }
         };
 
-        eprintln!("[session] Real-time transcription connected");
+        eprintln!("[session] Local Whisper transcription started");
 
-        // Spawn event receiver: forwards WebSocket events to Tauri UI
+        // Spawn event receiver: forwards Whisper events to Tauri UI
         let app_events = app_clone.clone();
         let sid_events = session_id_clone.clone();
         let db_events = Arc::clone(&db_clone);
         tokio::spawn(async move {
             while let Some(event) = rt_events.recv().await {
                 match event {
-                    crate::mistral::realtime::TranscriptionEvent::TextDelta { text } => {
+                    crate::whisper::realtime::TranscriptionEvent::TextDelta { text } => {
                         let _ = app_events.emit("transcription-delta", &text);
                     }
-                    crate::mistral::realtime::TranscriptionEvent::Segment {
+                    crate::whisper::realtime::TranscriptionEvent::Segment {
                         text,
                         start,
                         end,
@@ -134,7 +134,7 @@ pub async fn start_session(
                         });
                         let _ = app_events.emit("transcription-segment", segment);
                     }
-                    crate::mistral::realtime::TranscriptionEvent::Error { message } => {
+                    crate::whisper::realtime::TranscriptionEvent::Error { message } => {
                         eprintln!("[session] Realtime error: {}", message);
                         let _ = app_events.emit("session-error", &message);
                         break;
@@ -144,7 +144,7 @@ pub async fn start_session(
             }
         });
 
-        // Main audio loop: read chunks, accumulate for WAV, send to WebSocket
+        // Main audio loop: read chunks, accumulate for WAV, send to Whisper
         loop {
             if *stop_rx.borrow() {
                 break;
@@ -167,7 +167,7 @@ pub async fn start_session(
                             samples.extend_from_slice(&chunk);
                         }
 
-                        // Send to WebSocket for real-time transcription
+                        // Send to Whisper for real-time transcription
                         rt_handle.send_audio(chunk);
                     }
                 }
@@ -178,7 +178,7 @@ pub async fn start_session(
             }
         }
 
-        // Signal end of audio to WebSocket
+        // Signal end of audio to Whisper
         rt_handle.end_audio();
     });
 
@@ -237,7 +237,7 @@ pub async fn stop_session(
     // Save full WAV file
     let audio_dir = dirs::data_dir()
         .unwrap_or_else(|| std::path::PathBuf::from("."))
-        .join("poptranscribe")
+        .join("poptalk")
         .join("audio");
     std::fs::create_dir_all(&audio_dir).ok();
     let audio_path = audio_dir.join(format!("{}.wav", session_id));
@@ -264,96 +264,133 @@ pub async fn stop_session(
         let key = state.api_key.lock().map_err(|e| e.to_string())?;
         key.clone()
     };
+    let whisper_model_id = {
+        let db = state.db.lock().map_err(|e| e.to_string())?;
+        db.get_setting("whisper_model")
+            .ok()
+            .flatten()
+            .unwrap_or_else(|| "large-v3-turbo-q5_0".to_string())
+    };
     let db_clone = Arc::clone(&state.db);
 
-    // Background task: batch transcription with diarization, then summary
+    // Background task: local batch transcription + diarization, then optional summary
     tokio::spawn(async move {
-        match crate::mistral::batch::transcribe_batch(&api_key, &audio_path, true, Some("fr"))
-            .await
-        {
-            Ok(response) => {
-                // Clear old live (non-diarized) segments and save diarized ones
-                if let Ok(db) = db_clone.lock() {
-                    // Remove the live streaming segments so they are replaced by
-                    // higher-quality diarized ones
-                    let _ = db.clear_live_segments(&session_id);
+        // Get model paths
+        let model_path = match crate::models::get_whisper_model_path(&whisper_model_id) {
+            Some(p) => p,
+            None => {
+                let _ = app.emit("session-error", "Modele Whisper non telecharge");
+                return;
+            }
+        };
 
-                    for seg in &response.segments {
-                        let _ = db.save_segment(
-                            &session_id,
-                            &seg.text,
-                            seg.start,
-                            seg.end,
-                            seg.speaker_id.as_deref(),
-                            true,
-                        );
-                    }
-                }
+        // Step 1: Batch transcription with Whisper (blocking CPU work)
+        let audio_path_clone = audio_path.clone();
+        let model_path_clone = model_path.clone();
+        let transcription = tokio::task::spawn_blocking(move || {
+            crate::whisper::transcribe_file(&model_path_clone, &audio_path_clone)
+        })
+        .await;
 
-                // Build transcript text for summary
-                let transcript_text: String = response
-                    .segments
-                    .iter()
-                    .map(|s| {
-                        if let Some(ref speaker) = s.speaker_id {
-                            format!("{}: {}", speaker, s.text)
-                        } else {
-                            s.text.clone()
-                        }
-                    })
-                    .collect::<Vec<_>>()
-                    .join("\n");
-
-                // Generate AI title + summary
-                if !transcript_text.is_empty() {
-                    // Title generation (fast, runs first)
-                    match crate::mistral::chat::generate_title(&api_key, &transcript_text).await
-                    {
-                        Ok(title) => {
-                            if let Ok(db) = db_clone.lock() {
-                                let _ = db.update_session_title(&session_id, &title);
-                            }
-                        }
-                        Err(e) => {
-                            eprintln!(
-                                "[session] Erreur generation titre pour {}: {}",
-                                session_id, e
-                            );
-                        }
-                    }
-
-                    // Summary generation
-                    match crate::mistral::chat::generate_summary(&api_key, &transcript_text).await
-                    {
-                        Ok(summary) => {
-                            if let Ok(summary_json) = serde_json::to_string(&summary) {
-                                if let Ok(db) = db_clone.lock() {
-                                    let _ = db.save_summary(&session_id, &summary_json);
-                                }
-                            }
-                        }
-                        Err(e) => {
-                            eprintln!(
-                                "[session] Erreur generation resume pour {}: {}",
-                                session_id, e
-                            );
-                        }
-                    }
-                }
-
-                let _ = app.emit("session-complete", &session_id);
+        let response = match transcription {
+            Ok(Ok(resp)) => resp,
+            Ok(Err(e)) => {
+                eprintln!("[session] Erreur transcription batch: {}", e);
+                let _ = app.emit("session-error", format!("Erreur transcription: {}", e));
+                return;
             }
             Err(e) => {
-                eprintln!(
-                    "[session] Erreur transcription batch pour {}: {}",
-                    session_id, e
-                );
-                let _ = app.emit(
-                    "session-error",
-                    format!("Erreur de transcription: {}", e),
+                eprintln!("[session] Erreur task transcription: {}", e);
+                let _ = app.emit("session-error", format!("Erreur transcription: {}", e));
+                return;
+            }
+        };
+
+        eprintln!("[session] Transcription batch terminee: {} segments", response.segments.len());
+
+        // Step 2: Diarization (if models are available)
+        let final_segments = if let Some((seg_model, emb_model)) = crate::models::get_diarization_paths() {
+            let audio_path_clone = audio_path.clone();
+            let diarize_result = tokio::task::spawn_blocking(move || {
+                crate::diarization::diarize(&audio_path_clone, &seg_model, &emb_model, None)
+            })
+            .await;
+
+            match diarize_result {
+                Ok(Ok(diarized)) => {
+                    eprintln!("[session] Diarisation terminee: {} segments", diarized.len());
+                    crate::diarization::merge_with_transcription(&response.segments, &diarized)
+                }
+                Ok(Err(e)) => {
+                    eprintln!("[session] Erreur diarisation (continue sans): {}", e);
+                    response.segments
+                }
+                Err(e) => {
+                    eprintln!("[session] Erreur task diarisation (continue sans): {}", e);
+                    response.segments
+                }
+            }
+        } else {
+            eprintln!("[session] Modeles diarisation non disponibles, continue sans");
+            response.segments
+        };
+
+        // Step 3: Save diarized segments to DB
+        if let Ok(db) = db_clone.lock() {
+            let _ = db.clear_live_segments(&session_id);
+            for seg in &final_segments {
+                let _ = db.save_segment(
+                    &session_id,
+                    &seg.text,
+                    seg.start,
+                    seg.end,
+                    seg.speaker_id.as_deref(),
+                    true,
                 );
             }
         }
+
+        // Build transcript text for summary
+        let transcript_text: String = final_segments
+            .iter()
+            .map(|s| {
+                if let Some(ref speaker) = s.speaker_id {
+                    format!("{}: {}", speaker, s.text)
+                } else {
+                    s.text.clone()
+                }
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
+
+        // Step 4: Generate AI title + summary (only if API key is configured)
+        if !api_key.is_empty() && !transcript_text.is_empty() {
+            match crate::llm::chat::generate_title(&api_key, &transcript_text).await {
+                Ok(title) => {
+                    if let Ok(db) = db_clone.lock() {
+                        let _ = db.update_session_title(&session_id, &title);
+                    }
+                }
+                Err(e) => {
+                    eprintln!("[session] Erreur generation titre pour {}: {}", session_id, e);
+                }
+            }
+
+            match crate::llm::chat::generate_summary(&api_key, &transcript_text).await {
+                Ok(summary) => {
+                    if let Ok(summary_json) = serde_json::to_string(&summary) {
+                        if let Ok(db) = db_clone.lock() {
+                            let _ = db.save_summary(&session_id, &summary_json);
+                        }
+                    }
+                }
+                Err(e) => {
+                    eprintln!("[session] Erreur generation resume pour {}: {}", session_id, e);
+                }
+            }
+        }
+
+        let _ = app.emit("session-complete", &session_id);
     });
 
     Ok(())
@@ -441,7 +478,11 @@ pub async fn search_llm(
         return Err("Aucune transcription disponible pour cette session.".to_string());
     }
 
-    crate::mistral::chat::search_transcript(&api_key, &transcript, &query)
+    if api_key.is_empty() {
+        return Err("Cle API non configuree. Necessaire pour la recherche IA.".to_string());
+    }
+
+    crate::llm::chat::search_transcript(&api_key, &transcript, &query)
         .await
         .map_err(|e| e.to_string())
 }
@@ -491,14 +532,14 @@ pub async fn export_session(
                 &summary,
             );
 
-            // Use configured export directory, or default to ~/Documents/poptranscribe/exports/
+            // Use configured export directory, or default to ~/Documents/poptalk/exports/
             let export_dir = {
                 let db = state.db.lock().map_err(|e| e.to_string())?;
                 match db.get_setting("export_dir").ok().flatten() {
                     Some(dir) if !dir.is_empty() => std::path::PathBuf::from(dir),
                     _ => dirs::document_dir()
                         .unwrap_or_else(|| std::path::PathBuf::from("."))
-                        .join("poptranscribe")
+                        .join("poptalk")
                         .join("exports"),
                 }
             };
@@ -535,7 +576,7 @@ pub async fn export_session(
                     Some(dir) if !dir.is_empty() => std::path::PathBuf::from(dir),
                     _ => dirs::document_dir()
                         .unwrap_or_else(|| std::path::PathBuf::from("."))
-                        .join("poptranscribe")
+                        .join("poptalk")
                         .join("exports"),
                 }
             };
@@ -652,4 +693,42 @@ pub async fn pick_folder(app: tauri::AppHandle) -> Result<Option<String>, String
     let folder = app.dialog().file()
         .blocking_pick_folder();
     Ok(folder.map(|p| p.to_string()))
+}
+
+// ── Model management ────────────────────────────────────────────────
+
+#[tauri::command]
+pub async fn get_available_models() -> Result<Vec<crate::models::ModelInfo>, String> {
+    Ok(crate::models::all_models())
+}
+
+#[tauri::command]
+pub async fn get_model_status(model_id: String) -> Result<crate::models::ModelStatus, String> {
+    Ok(crate::models::get_model_status(&model_id))
+}
+
+#[tauri::command]
+pub async fn download_model(
+    model_id: String,
+    app: tauri::AppHandle,
+) -> Result<String, String> {
+    let (progress_tx, mut progress_rx) = tokio::sync::mpsc::unbounded_channel::<f64>();
+
+    // Forward progress to frontend
+    let app_clone = app.clone();
+    let model_id_clone = model_id.clone();
+    tokio::spawn(async move {
+        while let Some(progress) = progress_rx.recv().await {
+            let _ = app_clone.emit("model-download-progress", serde_json::json!({
+                "model_id": model_id_clone,
+                "progress": progress,
+            }));
+        }
+    });
+
+    let path = crate::models::download_model(&model_id, progress_tx)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    Ok(path.to_string_lossy().to_string())
 }

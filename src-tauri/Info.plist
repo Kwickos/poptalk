@@ -3,8 +3,8 @@
 <plist version="1.0">
 <dict>
     <key>NSMicrophoneUsageDescription</key>
-    <string>PopTranscribe a besoin du micro pour capturer et transcrire l'audio de vos reunions.</string>
+    <string>PopTalk a besoin du micro pour capturer et transcrire l'audio de vos reunions.</string>
     <key>NSScreenCaptureUsageDescription</key>
-    <string>PopTranscribe a besoin de l'enregistrement d'ecran pour capturer l'audio systeme lors des visioconferences.</string>
+    <string>PopTalk a besoin de l'enregistrement d'ecran pour capturer l'audio systeme lors des visioconferences.</string>
 </dict>
 </plist>

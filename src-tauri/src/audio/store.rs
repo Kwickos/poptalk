@@ -25,7 +25,7 @@ mod tests {
     #[test]
     fn test_save_and_verify_wav() {
         let samples: Vec<i16> = (0..16000).map(|i| (i % 1000) as i16).collect();
-        let path = env::temp_dir().join("poptranscribe_test_audio.wav");
+        let path = env::temp_dir().join("poptalk_test_audio.wav");
 
         save_wav(&path, &samples, 16000).unwrap();
 
@@ -51,7 +51,7 @@ mod tests {
     #[test]
     fn test_save_empty_wav() {
         let samples: Vec<i16> = vec![];
-        let path = env::temp_dir().join("poptranscribe_test_empty.wav");
+        let path = env::temp_dir().join("poptalk_test_empty.wav");
 
         save_wav(&path, &samples, 16000).unwrap();
         assert!(path.exists());

@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "poptranscribe-app",
-  "version": "0.2.0",
-  "identifier": "com.alexandre.poptranscribe-app",
+  "productName": "poptalk-app",
+  "version": "0.3.0",
+  "identifier": "com.alexandre.poptalk-app",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "PopTranscribe",
+        "title": "PopTalk",
         "width": 1100,
         "height": 720,
         "titleBarStyle": "Overlay",
@@ -43,7 +43,7 @@
     "updater": {
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEMyNEY0NkQyRUREODY3RUIKUldUclo5anQwa1pQd21DZGd6bEZKMTlPM2FTcVlEV3E5aGExamlIUVByNnovU1JQd1JVLzNFbHcK",
       "endpoints": [
-        "https://github.com/Kwickos/poptranscribe/releases/latest/download/latest.json"
+        "https://github.com/Kwickos/poptalk/releases/latest/download/latest.json"
       ]
     }
   }

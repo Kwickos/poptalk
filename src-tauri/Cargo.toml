@@ -1,5 +1,5 @@
 [package]
-name = "poptranscribe-app"
+name = "poptalk-app"
 version = "0.2.0"
 description = "A Tauri App"
 authors = ["you"]
@@ -11,7 +11,7 @@ edition = "2021"
 # The `_lib` suffix may seem redundant but it is necessary
 # to make the lib name unique and wouldn't conflict with the bin name.
 # This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
-name = "poptranscribe_app_lib"
+name = "poptalk_app_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
@@ -35,9 +35,17 @@ chrono = { version = "0.4", features = ["serde"] }
 futures-util = "0.3"
 dirs = "6"
 genpdf = "0.2"
-tokio-tungstenite = { version = "0.26", features = ["native-tls"] }
-base64 = "0.22"
+whisper-rs = "0.16"
+sherpa-rs = { version = "0.6", default-features = false, features = ["download-binaries"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 screencapturekit = { version = "1", features = ["async"] }
+
+# Compile whisper.cpp and sherpa-onnx with full optimizations even in dev mode.
+# Without this, inference is 10-20x slower and WHISPER_DEBUG spams logs.
+[profile.dev.package.whisper-rs-sys]
+opt-level = 3
+
+[profile.dev.package.sherpa-rs-sys]
+opt-level = 3
 

@@ -1,5 +1,5 @@
 use crate::db::Segment;
-use crate::mistral::chat::Summary;
+use crate::llm::chat::Summary;
 
 /// Formats a timestamp in seconds to `[MM:SS]` or `[HH:MM:SS]` if >= 1 hour.
 fn format_timestamp(seconds: f64) -> String {
@@ -169,7 +169,7 @@ pub fn export_pdf(
                 .styled(genpdf::style::Style::new().bold().with_font_size(12)));
             let mut list = genpdf::elements::UnorderedList::new();
             for point in &summary.key_points {
-                list.push(genpdf::elements::Paragraph::new(point.clone()));
+                list.push(genpdf::elements::Paragraph::new(point.as_str()));
             }
             doc.push(list);
         }
@@ -180,7 +180,7 @@ pub fn export_pdf(
                 .styled(genpdf::style::Style::new().bold().with_font_size(12)));
             let mut list = genpdf::elements::UnorderedList::new();
             for decision in &summary.decisions {
-                list.push(genpdf::elements::Paragraph::new(decision.clone()));
+                list.push(genpdf::elements::Paragraph::new(decision.as_str()));
             }
             doc.push(list);
         }
@@ -382,7 +382,7 @@ mod tests {
 
     #[test]
     fn test_export_to_file() {
-        let dir = std::env::temp_dir().join("poptranscribe_test_export");
+        let dir = std::env::temp_dir().join("poptalk_test_export");
         let path = dir.join("test_export.md");
         let content = "# Test\n\nHello world";
 
