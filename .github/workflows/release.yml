@@ -47,15 +47,20 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Install cargs (Windows only)
+      - name: Install sherpa-onnx static libs + cargs (Windows only)
         if: matrix.platform == 'windows-latest'
         run: |
+          # Download and extract sherpa-onnx static binaries
+          wget.exe -q https://github.com/k2-fsa/sherpa-onnx/releases/download/v1.12.9/sherpa-onnx-v1.12.9-win-x64-static.tar.bz2
+          tar.exe xf sherpa-onnx-v1.12.9-win-x64-static.tar.bz2
+          echo "SHERPA_LIB_PATH=$pwd\sherpa-onnx-v1.12.9-win-x64-static" >> $env:GITHUB_ENV
+
+          # Build cargs dependency
           git clone --depth 1 https://github.com/likle/cargs.git C:\cargs
           cd C:\cargs
           cmake -B build
           cmake --build build --config Release
-          Copy-Item build\Release\cargs.lib -Destination "$env:USERPROFILE\.cargo" -Force
-          echo "LIB=$env:USERPROFILE\.cargo;$env:LIB" >> $env:GITHUB_ENV
+          Copy-Item build\Release\cargs.lib -Destination "$pwd\..\sherpa-onnx-v1.12.9-win-x64-static\lib" -Force
 
       - uses: tauri-apps/tauri-action@v0
         env:
@@ -63,6 +68,7 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
           MACOSX_DEPLOYMENT_TARGET: "13.0"
+          RUSTFLAGS: ${{ matrix.platform == 'windows-latest' && '-C target-feature=+crt-static' || '' }}
         with:
           tagName: v__VERSION__
           releaseName: 'PopTalk v__VERSION__'
