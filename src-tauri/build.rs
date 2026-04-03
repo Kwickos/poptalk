@@ -6,11 +6,5 @@ fn main() {
         println!("cargo:rustc-link-arg=-Wl,-rpath,/usr/lib/swift");
     }
 
-    if target_os == "windows" {
-        // Required by onnxruntime static linking (ETW telemetry + registry)
-        println!("cargo:rustc-link-lib=advapi32");
-        println!("cargo:rustc-link-lib=advevtapi");
-    }
-
     tauri_build::build()
 }
